@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+    <!-- Main plugin class -->
+    <class>org.hellocar.openfire.plugin.PushForwardPlugin</class>
+
+
+    <name>hcPushForward</name>
+    <description>HelloCar Unclaimed Messages Forward and Offline Messages Pushing</description>
+    <author>HelloCar</author>
+    <version>1.0.0</version>
+    <date>2/26/2013</date>
+    <minServerVersion>3.7.1</minServerVersion>
+    <databaseKey>hcpushforward</databaseKey>
+    <databaseVersion>1</databaseVersion>
+
+    <!-- Admin console entries -->
+
+    <adminconsole />
+</plugin>
