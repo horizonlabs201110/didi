@@ -1,6 +1,6 @@
 package org.hellocar.openfire.plugin;
 
-public interface IPushForwardManager {
+public interface IManager {
 	void Init();
 	void Terminate();
 }

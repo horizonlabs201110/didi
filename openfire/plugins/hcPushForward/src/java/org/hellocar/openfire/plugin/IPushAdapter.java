@@ -1,5 +1,7 @@
 package org.hellocar.openfire.plugin;
 
-public class IPushAdapter {
+import org.xmpp.packet.*;
 
+public interface IPushAdapter {
+	void push(Message message);
 }

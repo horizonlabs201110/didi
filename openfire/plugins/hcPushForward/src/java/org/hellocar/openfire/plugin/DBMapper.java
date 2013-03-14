@@ -1,13 +1,8 @@
 package org.hellocar.openfire.plugin;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.sql.*;
+import java.util.*;
+import java.util.concurrent.*;
 
 import org.jivesoftware.openfire.*;
 import org.jivesoftware.database.DbConnectionManager;
@@ -16,8 +11,7 @@ import org.jivesoftware.openfire.plugin.cluster.RulesUpdatedEvent;
 import org.jivesoftware.openfire.user.User;
 import org.jivesoftware.util.cache.CacheFactory;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.*;
 
 import org.xmpp.packet.*;
 
@@ -65,5 +59,20 @@ public class DBMapper {
     
     public static int CheckMessageForUser(User usr) {
     	return 0;
+    }
+    
+    public static ArrayList<MessageEx> getAllOfflineMessages() {
+    	return null;
+    }
+    
+    public static ArrayList<MessageEx> getAllForwardMessages() {
+    	return null;
+    }
+    
+    public static void updateMessages(ArrayList<MessageEx> messages) {
+    }
+    
+    public static void updateMessage(MessageEx message) {
+    
     }
 }

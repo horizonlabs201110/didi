@@ -1,5 +1,7 @@
 package org.hellocar.openfire.plugin;
 
-public class IForwardAdapter {
+import org.xmpp.packet.*;
 
+public interface IForwardAdapter {
+	void forward(Message message);
 }

@@ -5,12 +5,12 @@
 
 
     <name>hcPushForward</name>
-    <description>HelloCar Unclaimed Messages Forward and Offline Messages Pushing</description>
+    <description>HelloCar Unclaimed Message Forwarding and Offline Message Pushing</description>
     <author>HelloCar</author>
     <version>1.0.0</version>
     <date>2/26/2013</date>
     <minServerVersion>3.7.1</minServerVersion>
-    <databaseKey>hcpushforward</databaseKey>
+    <databaseKey>hcPushForward</databaseKey>
     <databaseVersion>1</databaseVersion>
 
     <!-- Admin console entries -->
