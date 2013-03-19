@@ -5,9 +5,10 @@ import org.xmpp.packet.Message;
 class MessageEx {
 	public Message message;
 	public long id;
-	public MessageStatus Status;
-	public String StatusMessage;
-	public MessageType Type;
+	public MessageStatus status;
+	public String statusMessage;
+	public MessageType type;
+	public long lastModified;
 }
 
 enum MessageStatus { 

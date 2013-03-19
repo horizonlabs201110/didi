@@ -2,47 +2,38 @@ package org.hellocar.openfire.plugin;
 
 import java.util.ArrayList;
 
-import org.xmpp.packet.*;
-
 public class ForwardManager implements IManager, Runnable {
-	public static IManager CreateInstance(IPushAdapter push, IForwardAdapter forward) {
-		return new ForwardManager(push, forward);
+	public static IManager createInstance(IForwardAdapter forward) {
+		return new ForwardManager(forward);
 	}
 		
 	private ManualEvent mainEvent = null;
 	private boolean terminated = false;
 	private Thread mainThread = null;
-	private IPushAdapter pusher = null;
 	private IForwardAdapter forwarder = null;
 		
-	public ForwardManager(IPushAdapter push, IForwardAdapter forward) {
-		if (push == null) {
-			throw new IllegalArgumentException("push");
-		}
+	public ForwardManager(IForwardAdapter forward) {
 		if (forward == null) {
 			throw new IllegalArgumentException("forward");
 		}
-		
-		pusher = push;
 		forwarder = forward;
 	}
 	
-	public void Init() {
+	public void init() {
 		terminated = false;
 		mainEvent = new ManualEvent();
 		mainThread = new Thread(this);
 		mainThread.start();
 	}
 	
-	public void Terminate() {
+	public void terminate() {
 		terminated = true;
 		if (mainEvent != null) {
-			mainEvent.doNotifyAll();
-			mainEvent = null;
+			mainEvent.doNotify();
 		}
 		if (mainThread != null) {
 			try {
-				mainThread.join(Utils.THREAD_MAIN_JOIN_MILLISECONDS);
+				mainThread.join(Utils.THREAD_FORWARD_JOIN_MILLISECONDS);
 			}
 			catch (InterruptedException ex) {
 				//nothing to do
@@ -50,58 +41,55 @@ public class ForwardManager implements IManager, Runnable {
 			catch (Exception ex) {
 				//nothing to do
 			}
-			finally {
-				mainThread = null;
-			}
+		}
+		mainThread = null;
+		mainEvent = null;
+	}
+	
+	public void keepalive() {
+		if (mainEvent != null) {
+			mainEvent.doNotify();
 		}
 	}
 	
 	public void run() {
-		try {
-			while (!terminated) {
+		while (!terminated) {
+			boolean done = false;
+			int count = 0;
+			ArrayList<MessageEx> mxs = null;
+			try {
 				Configuration.load();
-				
-				ArrayList<MessageEx> offlineMessages = DBMapper.getAllOfflineMessages();
-				for(MessageEx mex : offlineMessages) {
-					try {
-						pusher.push(mex.message);
-						mex.Status = MessageStatus.SUCCEED;
-						mex.StatusMessage = "";
-					}
-					catch (Exception ex) {
-						mex.Status = MessageStatus.FAIL;
-						mex.StatusMessage = ex.toString();
-					}
-					DBMapper.updateMessage(mex);
+				done = false;
+				do {
+					mxs = DBMapper.getAllMessages(MessageType.POSTMAN, MessageStatus.READY);
+					count = mxs.size();
+					done = count > 0 ? false : true;
+					Utils.debug(String.format("Get %1$d postman message ready to forward", count));
 					
-					if (terminated) { break; }
-				}
-				
-				if (terminated) { continue; }
-				
-				ArrayList<MessageEx> forwardMessages = DBMapper.getAllForwardMessages();
-				for(MessageEx mex : forwardMessages) {
-					try {
-						forwarder.forward(mex.message);
-						mex.Status = MessageStatus.SUCCEED;
-						mex.StatusMessage = "";
+					if (!done) {
+						for(MessageEx mx : mxs) {
+							try {
+								forwarder.forward(mx.message);
+								mx.status = MessageStatus.SUCCEED;
+								mx.statusMessage = "";
+								Utils.debug(String.format("Forward message, %1$s", mx.message.toString()));
+							}
+							catch (Exception ex) {
+								mx.status = MessageStatus.FAIL;
+								mx.statusMessage = ex.getMessage();
+								Utils.error(String.format("Fail to forward message, %1$s", mx.message.toString()), ex);
+							}
+							DBMapper.updateMessageStatus(mx.id, mx.status, mx.statusMessage);
+							if (terminated) { break; }
+						}
 					}
-					catch (Exception ex) {
-						mex.Status = MessageStatus.FAIL;
-						mex.StatusMessage = ex.toString();
-					}
-					DBMapper.updateMessage(mex);
-					
 					if (terminated) { break; }
-				}
-				
-				if (terminated) { continue; }
-				
-				mainEvent.wait(Utils.THREAD_MAIN_LOOP_MILLISECONDS);
+				} while (done);
 			}
-		}
-		catch (Exception ex) {
-			Utils.Error("Unexpected error occur", ex);
+			catch (Exception ex) {
+				Utils.error("Unexpected error occurs in message forwarding", ex);
+			}
+			if (!terminated) { mainEvent.doWait(Configuration.forwardIntervalInSeconds * 1000); }
 		}
 	}
 }

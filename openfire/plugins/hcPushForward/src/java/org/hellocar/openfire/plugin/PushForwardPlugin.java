@@ -10,17 +10,23 @@ import org.jivesoftware.openfire.session.*;
 import org.jivesoftware.openfire.user.*;
 import org.xmpp.packet.*;
 
-public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMessageListener, UserEventListener, IPushAdapter, IForwardAdapter {
-	private PluginManager pluginManager = null;
+public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMessageListener, UserEventListener, IForwardAdapter {
+	private XMPPServer server = null;
+	private MessageRouter router = null;
 	private InterceptorManager interceptorManager = null;
-    private IPushForwardManager pushForwardManager = null;
+	private IManager messageManager = null;
+	private IManager pushManager = null;
+    private IManager forwardManager = null;
     private boolean initialized = false;
 	private Object initLock = new Object();
 	
     public PushForwardPlugin() {
+    	server = XMPPServer.getInstance();
+    	router = server.getMessageRouter();
     	interceptorManager = InterceptorManager.getInstance();
-    	pushForwardManager = PushManager.CreateInstance(this, this);
-    	Utils.Debug("PushForwardPlugin created");
+    	messageManager = MessageManager.createInstance();
+    	pushManager = PushManager.createInstance(PushAdapter.createInstance());
+    	forwardManager = ForwardManager.createInstance(this);
     }
 
     public void initializePlugin(PluginManager manager, File pluginDirectory) {
@@ -28,16 +34,13 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
 			synchronized(initLock) {
 				if (!initialized) {
 					try {
-						pluginManager = manager;
-						Configuration.Load();
 						init();
-						
-				        initialized = true;
-				        Utils.Info("PushForwardPlugin loaded");
+						initialized = true;
+				        Utils.info("PushForwardPlugin loaded");
 					}
 			    	catch (Exception ex) {
 			    		terminate();
-			    		Utils.Error("Fail to load PushForwardPlugin", ex);
+			    		Utils.error("Fail to load PushForwardPlugin", ex);
 			    		throw ex;
 			    	}
 				}
@@ -51,12 +54,11 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
 				if (initialized) {
 			    	try {
 			    		initialized = false;
-			    		pluginManager = null;
 			    		terminate();
-			    		Utils.Info("PushForwardPlugin destroyed");
+			    		Utils.info("PushForwardPlugin destroyed");
 			    	}
 			    	catch (Exception ex) {
-			    		Utils.Error("Failed to destroy PushForwardPlugin", ex);
+			    		Utils.error("Failed to destroy PushForwardPlugin", ex);
 			    	}
 				}
 			}
@@ -64,26 +66,27 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     }
     
     public void interceptPacket(Packet packet, Session session, boolean incoming, boolean processed) throws PacketRejectedException {
-    	try {
-	    	if (packet instanceof Message) {
-	            Message message = (Message)packet;
-	            if (message.getTo().getNode().equalsIgnoreCase(Configuration.PostmanName)) {
-	            	DBMapper.AddPostmanMessage(message);
-	            	
-	            	Utils.Debug(String.format("Postman message intercepted, %1$s", message.toString()));
+    	if (packet != null && packet instanceof Message) {
+    		Message message = (Message)packet;
+	        if (message.getTo().getNode().equalsIgnoreCase(Configuration.postmanName)) {
+	        	try {
+	        		DBMapper.addMessage(Utils.CreatePostmanMessage(message));
+	            	Utils.debug(String.format("Postman message received, %1$s", message.toString()));
+	        	}
+	        	catch (Exception ex) {
+            		Utils.error("Fail to receive postman message", ex);
 	            }
 	        }
-    	} catch (Exception ex) {
-    		Utils.Error("Fail to intercept postman message", ex);
     	}
     }
     
     public void messageStored(Message message) {
     	try {
-    		DBMapper.AddOfflineMessage(message);
-    		Utils.Debug(String.format("Offline message intercepted, %1$s", message.toString()));
+    		DBMapper.addMessage(Utils.CreateOfflineMessage(message));
+    		pushManager.keepalive();
+    		Utils.debug(String.format("Offline message received, %1$s", message.toString()));
     	} catch (Exception ex) {
-    		Utils.Error("Fail to intercept offline message", ex);
+    		Utils.error("Fail to receive offline message", ex);
     	}
     }
     
@@ -92,11 +95,12 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     
     public void userCreated(User user, Map<String, Object> params) {
     	try {
-    		int count = DBMapper.CheckMessageForUser(user);
-    		Utils.Debug(String.format("Prepare message for user %1$s, count %2$d", user.getUsername(), count));
+    		int count = DBMapper.checkMessageForUser(user);
+    		if (count > 0) { forwardManager.keepalive(); }
+    		Utils.debug(String.format("Check message for user %1$s, count %2$d", user.getUsername(), count));
     	}
     	catch (Exception ex) {
-    		Utils.Error(String.format("Failed to prepare message for user %1$s", user.getUsername()), ex);
+    		Utils.error(String.format("Fail to check message for user %1$s", user.getUsername()), ex);
     	}
     }
 
@@ -106,22 +110,26 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     public void userModified(User user, Map<String, Object> params) {
     }
     
-    public void push(Message message) {
-    }
-    
     public void forward(Message message) {
-    	
+    	router.route(message);
     }
     
-    private void init() {	
-        OfflineMessageStrategy.addListener(this);
-        interceptorManager.addInterceptor(this);
-        pushForwardManager.Init();
+    private void init() {
+    	Configuration.load();
+    	messageManager.init();
+    	pushManager.init();
+        forwardManager.init();
+    	interceptorManager.addInterceptor(this);
+    	OfflineMessageStrategy.addListener(this);
+        UserEventDispatcher.addListener(this);
     }
     
     private void terminate() {
+    	UserEventDispatcher.removeListener(this);
+    	OfflineMessageStrategy.removeListener(this);
     	interceptorManager.removeInterceptor(this);
-		OfflineMessageStrategy.removeListener(this);
-		pushForwardManager.Terminate();
+    	forwardManager.terminate();
+		pushManager.terminate();
+		messageManager.terminate();
     }
 }

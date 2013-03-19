@@ -1,28 +1,24 @@
 package org.hellocar.openfire.plugin;
 
 import java.sql.*;
+import java.sql.Connection;
 import java.util.*;
-import java.util.concurrent.*;
 
 import org.jivesoftware.openfire.*;
-import org.jivesoftware.database.DbConnectionManager;
-import org.jivesoftware.openfire.cluster.ClusterManager;
-import org.jivesoftware.openfire.plugin.cluster.RulesUpdatedEvent;
-import org.jivesoftware.openfire.user.User;
-import org.jivesoftware.util.cache.CacheFactory;
+import org.jivesoftware.database.*;
+import org.jivesoftware.openfire.user.*;
 
 import org.slf4j.*;
 
-import org.xmpp.packet.*;
-
 public class DBMapper {
-	private static final Logger Log = LoggerFactory.getLogger(PushForwardDBMapper.class);
-	
-    private static final String SQL_INSERT_MESSAGE =
+	private static final String SQL_INSERT_MESSAGE =
             "INSERT INTO ofHCMessages (type,toUserName,fromUserName,status,stanza,lastModified) VALUES(?,?,?,?,?,?)";
 
-    public static void AddOfflineMessage(Message msg) {
-    	Connection con = null;
+	public static void cleanMessage(long retentionInSeconds) {
+    }
+    
+	public static void addMessage(MessageEx msg) {
+		Connection con = null;
         PreparedStatement pstmt = null;
         long now = new Date().getTime();
         try {
@@ -52,27 +48,16 @@ public class DBMapper {
         finally {
             DbConnectionManager.closeConnection(pstmt, con);
         }
-    }
-    public static void AddPostmanMessage(Message msg) {
-    	return;
-    }
+	}
     
-    public static int CheckMessageForUser(User usr) {
+    public static int checkMessageForUser(User usr) {
     	return 0;
     }
     
-    public static ArrayList<MessageEx> getAllOfflineMessages() {
+    public static void updateMessageStatus(long id, MessageStatus status, String statusMessage) {    
+    }
+    
+    public static ArrayList<MessageEx> getAllMessages(MessageType type, MessageStatus status) {
     	return null;
-    }
-    
-    public static ArrayList<MessageEx> getAllForwardMessages() {
-    	return null;
-    }
-    
-    public static void updateMessages(ArrayList<MessageEx> messages) {
-    }
-    
-    public static void updateMessage(MessageEx message) {
-    
     }
 }
