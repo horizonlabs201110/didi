@@ -1,7 +1,8 @@
-package org.hellocar.openfire.plugin;
+ package org.hellocar.openfire.plugin;
 
 import java.util.*;
 
+import org.dom4j.Element;
 import org.slf4j.*;
 import org.xmpp.packet.*;
 
@@ -13,31 +14,35 @@ public class Utils {
 	
 	private static Logger tracer = LoggerFactory.getLogger(PLUGIN_NAME);
 	
-	public static MessageEx CreatePostmanMessage(Message m) {
-		if (m == null) {
-			throw new IllegalArgumentException("message");
-		}
-		MessageEx mx = new MessageEx();
-		mx.id = 0;
-		mx.message = m;
-		mx.type = MessageType.POSTMAN;
-		mx.status = MessageStatus.QUEUE;
-		mx.statusMessage = "";
-		mx.lastModified = (new Date()).getTime();
-		return mx;
+	public static long getNow() {
+		return (new Date()).getTime();
 	}
 	
-	public static MessageEx CreateOfflineMessage(Message m) {
-		if (m == null) {
+	public static MessageEx CreateMessage(Message message, MessageType type, MessageStatus status) {
+		if (message == null) {
 			throw new IllegalArgumentException("message");
 		}
+		Message m = message.createCopy();
+		
+		if (type == MessageType.POSTMAN) {
+			try {
+				Element fe = m.getElement().element(Configuration.forwardElementName);
+				m.setTo(new JID(fe.getTextTrim()));
+				fe.detach();
+				Utils.debug("Postman message revised");
+			}
+			catch (Exception ex){
+				Utils.error("Fail to revise postman message", ex);
+				throw ex;
+			}
+		}
+		
 		MessageEx mx = new MessageEx();
-		mx.id = 0;
 		mx.message = m;
-		mx.type = MessageType.OFFLINE;
-		mx.status = MessageStatus.READY;
+		mx.type = type;
+		mx.status = status;
 		mx.statusMessage = "";
-		mx.lastModified = (new Date()).getTime();
+		
 		return mx;
 	}
 	

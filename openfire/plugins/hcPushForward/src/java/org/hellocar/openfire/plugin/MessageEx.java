@@ -14,27 +14,53 @@ class MessageEx {
 enum MessageStatus { 
 	QUEUE(1), READY(2), FAIL(9), SUCCEED(10);
 	
-	private int value;
+	private final int idx;
 	
-	private int getValue(){
-   	 return this.value;
+	MessageStatus(int index) {
+		this.idx = index;
+	}
+	
+	public int toInt(){
+   	 return this.idx;
     }
 	
-	private MessageStatus(int value) {
-		this.value = value;
+	public static MessageStatus parse(int index) {
+		switch (index) {
+		case 1:
+			return MessageStatus.QUEUE;
+		case 2:
+			return MessageStatus.READY;
+		case 9:
+			return MessageStatus.FAIL;
+		case 10:
+			return MessageStatus.SUCCEED;
+		default:
+			throw new IllegalArgumentException("index");
+		}
 	}
 }
-
+    
 enum MessageType { 
 	OFFLINE(1), POSTMAN(2);
 	
-	private int value;
+	private int idx;
 	
-	private int getValue(){
-   	 return this.value;
+	MessageType(int index) {
+		this.idx = index;
+	}
+	
+	public int toInt(){
+   	 return this.idx;
     }
 	
-	private MessageType(int value) {
-		this.value = value;
+	public static MessageType parse(int index) {
+		switch (index) {
+		case 1:
+			return MessageType.OFFLINE;
+		case 2:
+			return MessageType.POSTMAN;
+		default:
+			throw new IllegalArgumentException("index");
+		}
 	}
 }

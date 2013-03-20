@@ -70,7 +70,7 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     		Message message = (Message)packet;
 	        if (message.getTo().getNode().equalsIgnoreCase(Configuration.postmanName)) {
 	        	try {
-	        		DBMapper.addMessage(Utils.CreatePostmanMessage(message));
+	        		DBMapper.addMessage(Utils.CreateMessage(message, MessageType.POSTMAN, MessageStatus.QUEUE));
 	            	Utils.debug(String.format("Postman message received, %1$s", message.toString()));
 	        	}
 	        	catch (Exception ex) {
@@ -82,7 +82,7 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     
     public void messageStored(Message message) {
     	try {
-    		DBMapper.addMessage(Utils.CreateOfflineMessage(message));
+    		DBMapper.addMessage(Utils.CreateMessage(message, MessageType.OFFLINE, MessageStatus.READY));
     		pushManager.keepalive();
     		Utils.debug(String.format("Offline message received, %1$s", message.toString()));
     	} catch (Exception ex) {
@@ -95,7 +95,7 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     
     public void userCreated(User user, Map<String, Object> params) {
     	try {
-    		int count = DBMapper.checkMessageForUser(user);
+    		int count = DBMapper.prepareMessageForUser(user);
     		if (count > 0) { forwardManager.keepalive(); }
     		Utils.debug(String.format("Check message for user %1$s, count %2$d", user.getUsername(), count));
     	}

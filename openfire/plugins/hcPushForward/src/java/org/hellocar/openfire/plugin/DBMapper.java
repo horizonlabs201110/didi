@@ -1,63 +1,134 @@
 package org.hellocar.openfire.plugin;
 
 import java.sql.*;
-import java.sql.Connection;
 import java.util.*;
 
-import org.jivesoftware.openfire.*;
 import org.jivesoftware.database.*;
 import org.jivesoftware.openfire.user.*;
 
-import org.slf4j.*;
+import org.dom4j.DocumentException;
+import org.dom4j.DocumentHelper;
+
+import org.xmpp.packet.Message;
 
 public class DBMapper {
+	private static final String SQL_CLEAN_MESSAGE =
+			"DELETE FROM `ofhcmessage` WHERE (`status` = ? OR `status` = ?) AND `lastModified` < ?";
 	private static final String SQL_INSERT_MESSAGE =
-            "INSERT INTO ofHCMessages (type,toUserName,fromUserName,status,stanza,lastModified) VALUES(?,?,?,?,?,?)";
-
-	public static void cleanMessage(long retentionInSeconds) {
-    }
+			"INSERT INTO `ofhcmessage` (`type`,`to`,`from`,`status`,`statusMessage`,`stanza`,`lastModified`) VALUES (?,?,?,?,?,?,?)";
+    private static final String SQL_PREPARE_MESSAGE_FOR_USER =
+    		"UPDATE `ofhcmessage` SET `status` = ?, `lastModified` = ? WHERE `type` = ? AND `to` = ? AND `status` = ?";
+    private static final String SQL_UPDATE_MESSAGE_STATUS =
+    		"UPDATE `ofhcmessage` SET `status` = ?, `statusMessage` = ?, `lastModified` = ? WHERE `id` = ?";
+    private static final String SQL_GET_ALL_MESSAGES =
+    		"SELECT `id`,`type`,`to`,`from`,`status`,`statusMessage`,`stanza`,`lastModified` FROM `ofhcmessage` WHERE `type` = ? AND `status` = ?";
     
-	public static void addMessage(MessageEx msg) {
+	public static void cleanMessage(long retentionInSeconds) throws SQLException {
 		Connection con = null;
         PreparedStatement pstmt = null;
-        long now = new Date().getTime();
+        try {
+        	con = DbConnectionManager.getConnection();
+            pstmt = con.prepareStatement(SQL_CLEAN_MESSAGE);
+            
+            pstmt.setInt(1, MessageStatus.FAIL.toInt());
+            pstmt.setInt(2, MessageStatus.SUCCEED.toInt());
+            pstmt.setLong(3, Utils.getNow() -  retentionInSeconds * 1000);
+            
+            pstmt.execute();
+        }
+        finally {
+            DbConnectionManager.closeConnection(pstmt, con);
+        }
+    }
+    
+	public static void addMessage(MessageEx msg) throws SQLException {
+		Connection con = null;
+        PreparedStatement pstmt = null;
         try {
             con = DbConnectionManager.getConnection();
             pstmt = con.prepareStatement(SQL_INSERT_MESSAGE);
-            pstmt.setInt(1, 1);
-            pstmt.setString(2, msg.getTo().getNode());
-            pstmt.setString(3, msg.getFrom().getNode());
-            pstmt.setInt(4, 2);
-            String test = msg.toXML();
-            test = msg.toString();
-            pstmt.setString(5, msg.toXML());
             
-            test = String.valueOf(now);
-            pstmt.setString(6, String.valueOf(now));
+            pstmt.setInt(1, msg.type.toInt());
+            pstmt.setString(2, msg.message.getTo().getNode());
+            pstmt.setString(3,  msg.message.getFrom().getNode());
+            pstmt.setInt(4,  msg.status.toInt());
+            pstmt.setString(5, msg.statusMessage);
+            pstmt.setString(6, msg.message.toXML());
+            pstmt.setLong(7,  Utils.getNow());
             
             pstmt.execute();
-
-        } catch (SQLException ex) {
-            Log.error(ex.getMessage(), ex);
-            //throw ex;
-        }
-        catch (Exception ex) {
-            Log.error(ex.getMessage(), ex);
-            throw ex;
         }
         finally {
             DbConnectionManager.closeConnection(pstmt, con);
         }
 	}
     
-    public static int checkMessageForUser(User usr) {
-    	return 0;
+    public static int prepareMessageForUser(User usr) throws SQLException {
+    	Connection con = null;
+        PreparedStatement pstmt = null;
+        try {
+        	con = DbConnectionManager.getConnection();
+            pstmt = con.prepareStatement(SQL_PREPARE_MESSAGE_FOR_USER);
+            
+            pstmt.setInt(1, MessageStatus.READY.toInt());
+            pstmt.setLong(2, Utils.getNow());
+            pstmt.setInt(3, MessageType.POSTMAN.toInt());
+            pstmt.setString(4, usr.getUsername());
+            pstmt.setInt(5, MessageStatus.QUEUE.toInt());
+            
+            return pstmt.executeUpdate();
+        }
+        finally {
+            DbConnectionManager.closeConnection(pstmt, con);
+        }
     }
     
-    public static void updateMessageStatus(long id, MessageStatus status, String statusMessage) {    
+    public static void updateMessageStatus(long id, MessageStatus status, String statusMessage) throws SQLException  {
+    	Connection con = null;
+        PreparedStatement pstmt = null;
+        try {
+        	con = DbConnectionManager.getConnection();
+            pstmt = con.prepareStatement(SQL_UPDATE_MESSAGE_STATUS);
+            
+            pstmt.setInt(1, status.toInt());
+            pstmt.setString(2, statusMessage);
+            pstmt.setLong(3, Utils.getNow());
+            pstmt.setLong(4, id);
+            
+            pstmt.execute();
+        }
+        finally {
+            DbConnectionManager.closeConnection(pstmt, con);
+        }
     }
     
-    public static ArrayList<MessageEx> getAllMessages(MessageType type, MessageStatus status) {
-    	return null;
+    public static ArrayList<MessageEx> getAllMessages(MessageType type, MessageStatus status) throws SQLException, DocumentException {
+    	Connection con = null;
+        PreparedStatement pstmt = null;
+        ArrayList<MessageEx> mxs = new ArrayList<MessageEx>();
+        try {
+        	con = DbConnectionManager.getConnection();
+            pstmt = con.prepareStatement(SQL_GET_ALL_MESSAGES);
+            
+            pstmt.setInt(1, type.toInt());
+            pstmt.setInt(2, status.toInt());
+            ResultSet rs = pstmt.executeQuery();
+            
+            while (rs.next()) {
+            	MessageEx mx = new MessageEx();
+            	mx.id = rs.getLong(1);
+            	mx.type = MessageType.parse(rs.getInt(2));
+            	mx.status = MessageStatus.parse(rs.getInt(5));
+            	mx.statusMessage = rs.getString(6);
+            	mx.message = new Message(DocumentHelper.parseText(rs.getString(7)).getRootElement());
+            	mx.lastModified = rs.getLong(8);
+            	
+            	mxs.add(mx);
+            }
+        }
+        finally {
+            DbConnectionManager.closeConnection(pstmt, con);
+        }
+        return mxs;
     }
 }

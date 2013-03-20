@@ -10,7 +10,7 @@
     <version>1.0.0</version>
     <date>2/26/2013</date>
     <minServerVersion>3.7.1</minServerVersion>
-    <databaseKey>hcPushForward</databaseKey>
+    <databaseKey>hcpushforward</databaseKey>
     <databaseVersion>1</databaseVersion>
 
     <!-- Admin console entries -->
