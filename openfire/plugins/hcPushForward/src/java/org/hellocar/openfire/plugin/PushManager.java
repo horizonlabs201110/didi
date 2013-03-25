@@ -1,6 +1,7 @@
 package org.hellocar.openfire.plugin;
 
-import java.util.ArrayList;
+import java.util.*;
+import java.util.Map.Entry;
 
 public class PushManager implements IManager, Runnable {
 	public static IManager createInstance(IPushAdapter push) {
@@ -68,17 +69,29 @@ public class PushManager implements IManager, Runnable {
 					Utils.debug(String.format("Get %1$d offline message ready to push", count));
 					
 					if (!done) {
+						Hashtable<String, UserExtra> userTable = new Hashtable<String, UserExtra>();
 						for(MessageEx mx : mxs) {
-							try {
-								pusher.push(mx.message);
-								mx.status = MessageStatus.SUCCEED;
-								mx.statusMessage = "";
-								Utils.debug(String.format("Push message, %1$s", mx.message.toString()));
+							String user = mx.message.getTo().getNode();
+							if (!userTable.containsKey(user)) {
+								userTable.put(user, DBMapper.getUserExtra(user));
 							}
-							catch (Exception ex) {
-								mx.status = MessageStatus.FAIL;
-								mx.statusMessage = ex.getMessage();
-								Utils.error(String.format("Fail to push message, %1$s", mx.message.toString()), ex);
+						}
+						
+						for (MessageEx mx : mxs) {
+							String user = mx.message.getTo().getNode();
+							UserExtra extra = userTable.get(user);
+							if (extra != null && extra.iosPush && !extra.iosToken.isEmpty()) {
+								try {
+									pusher.push(mx, extra.iosToken);
+									mx.status = MessageStatus.SUCCEED;
+									mx.statusMessage = "";
+									Utils.debug(String.format("Push message to user %1$s, %2$s", user, mx.message.toXML()));
+								}
+								catch (Exception ex) {
+									mx.status = MessageStatus.FAIL;
+									mx.statusMessage = ex.getMessage();
+									Utils.error(String.format("Fail to push message to user %1$s, %2$s, %3$s", user, ex.getMessage(), mx.message.toXML()), ex);
+								}
 							}
 							DBMapper.updateMessageStatus(mx.id, mx.status, mx.statusMessage);
 							if (terminated) { break; }
@@ -88,7 +101,7 @@ public class PushManager implements IManager, Runnable {
 				} while (done);
 			}
 			catch (Exception ex) {
-				Utils.error("Unexpected error occurs in message pushing", ex);
+				Utils.error(String.format("Unexpected error occurs in message pushing, %1$s", ex.getMessage()), ex);
 			}
 			if (!terminated) { mainEvent.doWait(Configuration.pushIntervalInSeconds * 1000); }
 		}

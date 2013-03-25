@@ -2,9 +2,7 @@
 
 import java.util.*;
 
-import org.dom4j.Element;
 import org.slf4j.*;
-import org.xmpp.packet.*;
 
 public class Utils {
 	public static final String PLUGIN_NAME = "hcPushForwardPlugin";
@@ -16,34 +14,6 @@ public class Utils {
 	
 	public static long getNow() {
 		return (new Date()).getTime();
-	}
-	
-	public static MessageEx CreateMessage(Message message, MessageType type, MessageStatus status) {
-		if (message == null) {
-			throw new IllegalArgumentException("message");
-		}
-		Message m = message.createCopy();
-		
-		if (type == MessageType.POSTMAN) {
-			try {
-				Element fe = m.getElement().element(Configuration.forwardElementName);
-				m.setTo(new JID(fe.getTextTrim()));
-				fe.detach();
-				Utils.debug("Postman message revised");
-			}
-			catch (Exception ex){
-				Utils.error("Fail to revise postman message", ex);
-				throw ex;
-			}
-		}
-		
-		MessageEx mx = new MessageEx();
-		mx.message = m;
-		mx.type = type;
-		mx.status = status;
-		mx.statusMessage = "";
-		
-		return mx;
 	}
 	
 	public static void debug(String msg) {

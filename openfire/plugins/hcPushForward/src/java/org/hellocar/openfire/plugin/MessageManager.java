@@ -1,7 +1,5 @@
 package org.hellocar.openfire.plugin;
 
-import java.util.ArrayList;
-
 public class MessageManager implements IManager, Runnable {
 	public static IManager createInstance() {
 		return new MessageManager();
@@ -55,7 +53,7 @@ public class MessageManager implements IManager, Runnable {
 				Utils.debug("Clean up messages");
 			}
 			catch (Exception ex) {
-				Utils.error("Unexpected error occurs in message cleaning up", ex);
+				Utils.error(String.format("Unexpected error occurs in message cleaning up, %1$s", ex.toString()), ex);
 			}
 			if (!terminated) { mainEvent.doWait(Configuration.messageIntervalInSeconds * 1000); }
 		}

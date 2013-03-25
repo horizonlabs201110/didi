@@ -9,4 +9,10 @@ CREATE TABLE `ofhcmessage` (
    `lastModified` BIGINT NOT NULL,
    PRIMARY KEY (`id`)
 );
+CREATE TABLE `ofhcuserextra` (
+	`username` varchar(64) NOT NULL,
+	`iospush` boolean NOT NULL,
+	`iostoken` varchar(64) DEFAULT NULL,
+   PRIMARY KEY (`username`, `iostoken`)
+);
 INSERT INTO `ofversion`(`name`, `version`) values ('hcpushforward', 1);

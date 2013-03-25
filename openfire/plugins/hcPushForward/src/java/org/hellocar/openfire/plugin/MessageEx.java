@@ -9,6 +9,18 @@ class MessageEx {
 	public String statusMessage;
 	public MessageType type;
 	public long lastModified;
+	
+	public MessageEx(Message message, MessageType type, MessageStatus status) {
+		this.message = message;
+		this.status = status;
+		this.type = type;
+		this.id = 0;
+		this.statusMessage = null;
+		this.lastModified = Utils.getNow();
+	}
+	
+	public MessageEx() {
+	}
 }
 
 enum MessageStatus { 
@@ -21,7 +33,7 @@ enum MessageStatus {
 	}
 	
 	public int toInt(){
-   	 return this.idx;
+		return this.idx;
     }
 	
 	public static MessageStatus parse(int index) {

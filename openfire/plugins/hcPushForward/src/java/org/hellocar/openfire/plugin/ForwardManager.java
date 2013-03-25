@@ -72,12 +72,12 @@ public class ForwardManager implements IManager, Runnable {
 								forwarder.forward(mx.message);
 								mx.status = MessageStatus.SUCCEED;
 								mx.statusMessage = "";
-								Utils.debug(String.format("Forward message, %1$s", mx.message.toString()));
+								Utils.debug(String.format("Forward message, %1$s", mx.message.toXML()));
 							}
 							catch (Exception ex) {
 								mx.status = MessageStatus.FAIL;
 								mx.statusMessage = ex.getMessage();
-								Utils.error(String.format("Fail to forward message, %1$s", mx.message.toString()), ex);
+								Utils.error(String.format("Fail to forward message, %1$s, %2$s", ex.getMessage(), mx.message.toXML()), ex);
 							}
 							DBMapper.updateMessageStatus(mx.id, mx.status, mx.statusMessage);
 							if (terminated) { break; }
@@ -87,7 +87,7 @@ public class ForwardManager implements IManager, Runnable {
 				} while (done);
 			}
 			catch (Exception ex) {
-				Utils.error("Unexpected error occurs in message forwarding", ex);
+				Utils.error(String.format("Unexpected error occurs in message forwarding, %1$s", ex.getMessage()), ex);
 			}
 			if (!terminated) { mainEvent.doWait(Configuration.forwardIntervalInSeconds * 1000); }
 		}
