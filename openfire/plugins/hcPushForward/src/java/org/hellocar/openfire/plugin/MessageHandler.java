@@ -42,24 +42,29 @@ class PostmanMessageHandler implements IMessageHandler {
 		
 		Message msg = message.createCopy();
 		Element emsg = msg.getElement();
-		String iostoken = null;
-		boolean iospush = true;
 		Element eiostoken = emsg.element(Configuration.messageIOSToken);
+		Element eiospush = emsg.element(Configuration.messageIOSPush);
+		Element eforward = emsg.element(Configuration.messageForward);
+		
+		String iostoken = null;
 		if (eiostoken != null) {
 			iostoken = eiostoken.getTextTrim();
 			eiostoken.detach();
 		}
-		Element eiospush = emsg.element(Configuration.messageIOSPush);
+		
+		boolean iospush = true;
 		if (eiospush != null) {
 			iospush = Boolean.parseBoolean(eiospush.getTextTrim());
 			eiospush.detach();
 		}
-		Element eforward = emsg.element(Configuration.messageForward);
+		
 		if (eforward != null) {
 			msg.setTo(new JID(eforward.getTextTrim()));
 			eforward.detach();
+			
 			DBMapper.addMessage(new MessageEx(msg, MessageType.POSTMAN, MessageStatus.QUEUE));
 		}
+		
 		if (eiospush != null || eiostoken != null) { 
 			UserExtra ue = new UserExtra(msg.getFrom().getNode(), iospush, iostoken);
 			if (eiospush != null && eiostoken != null) {

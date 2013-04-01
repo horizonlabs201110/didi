@@ -10,7 +10,4 @@ public class UserExtra {
 		this.iosPush = iosPush;
 		this.iosToken = iosToken;
 	}
-	
-	public UserExtra() {
-	}
 }

@@ -20,6 +20,8 @@ public class DBMapper {
     		"UPDATE `ofhcmessage` SET `status` = ?, `lastModified` = ? WHERE `type` = ? AND `to` = ? AND `status` = ?";
     private static final String SQL_UPDATE_MESSAGE_STATUS =
     		"UPDATE `ofhcmessage` SET `status` = ?, `statusMessage` = ?, `lastModified` = ? WHERE `id` = ?";
+    private static final String SQL_UPDATE_OFFLINE_MESSAGE_STATUS =
+    		"UPDATE `ofhcmessage` SET `status` = ?, `statusMessage` = ?, `lastModified` = ? WHERE `type` = ? AND `to` = ? AND `status` = ?";
     private static final String SQL_GET_ALL_MESSAGES =
     		"SELECT `id`,`type`,`to`,`from`,`status`,`statusMessage`,`stanza`,`lastModified` FROM `ofhcmessage` WHERE `type` = ? AND `status` = ?";
     private static final String SQL_GET_USEREXTRA =
@@ -104,6 +106,27 @@ public class DBMapper {
             pstmt.setString(2, statusMessage);
             pstmt.setLong(3, Utils.getNow());
             pstmt.setLong(4, id);
+            
+            pstmt.execute();
+        }
+        finally {
+            DbConnectionManager.closeConnection(pstmt, con);
+        }
+    }
+    
+    public static void updateOfflineMessageStatus(String userName, MessageStatus status, String statusMessage) throws SQLException  {
+    	Connection con = null;
+        PreparedStatement pstmt = null;
+        try {
+        	con = DbConnectionManager.getConnection();
+            pstmt = con.prepareStatement(SQL_UPDATE_OFFLINE_MESSAGE_STATUS);
+            
+            pstmt.setInt(1, status.toInt());
+            pstmt.setString(2, statusMessage);
+            pstmt.setLong(3, Utils.getNow());
+            pstmt.setInt(3, MessageType.OFFLINE.toInt());
+            pstmt.setString(4, userName);
+            pstmt.setInt(5, MessageStatus.READY.toInt());
             
             pstmt.execute();
         }
@@ -222,7 +245,7 @@ public class DBMapper {
     public static UserExtra getUserExtra(String user) throws SQLException {
     	Connection con = null;
         PreparedStatement pstmt = null;
-        UserExtra ue = new UserExtra();
+        UserExtra ue = null;
         try {
         	con = DbConnectionManager.getConnection();
             pstmt = con.prepareStatement(SQL_GET_USEREXTRA);
@@ -230,9 +253,7 @@ public class DBMapper {
             ResultSet rs = pstmt.executeQuery();
             
             while (rs.next()) {
-            	ue.userName = user;
-            	ue.iosPush = rs.getBoolean(1);
-            	ue.iosToken = rs.getString(2);
+            	ue = new UserExtra(user, rs.getBoolean(1), rs.getString(2));
             	break;
             }
         }

@@ -1,5 +1,6 @@
 package org.hellocar.openfire.plugin;
 
+import org.jivesoftware.openfire.OfflineMessage;
 import org.json.JSONException;
 
 import javapns.communication.exceptions.KeystoreException;
@@ -18,8 +19,8 @@ public class PushAdapter implements IPushAdapter {
 		iosPusher = new IOSPushAdapter();
 	}
 	
-	public void push(MessageEx msg, String token) throws Exception {
-		iosPusher.push(msg, token);
+	public void push(OfflineMessage om, int sn, String token) throws Exception {
+		iosPusher.push(om, sn, token);
 	}
 }
 
@@ -30,16 +31,11 @@ class IOSPushAdapter implements IPushAdapter {
 	public IOSPushAdapter() {
 	}
 	
-	public void push(MessageEx msg, String token) throws Exception {
-		try {
-			GetPushQueue().add(GeneratePayload(msg), token);
-		}
-		catch (Exception ex) {
-			throw new Exception(String.format("Fail to push notification to ios, %1$s", ex.getMessage()), ex);
-		}
+	public void push(OfflineMessage om, int sn, String token) throws Exception {
+		getPushQueue().add(generatePayload(om, sn), token);
 	}
 	
-	private PushQueue GetPushQueue() throws KeystoreException {
+	private PushQueue getPushQueue() throws KeystoreException {
 		if (queue == null) {
 			synchronized(queueLock) {
 				if (queue == null) {
@@ -51,8 +47,13 @@ class IOSPushAdapter implements IPushAdapter {
 		return queue;
 	}
 	
-	private PushNotificationPayload GeneratePayload(MessageEx msg) throws JSONException{
+	private PushNotificationPayload generatePayload(OfflineMessage om, int sn) throws JSONException{
 		PushNotificationPayload payload = PushNotificationPayload.complex();
+		payload.addAlert(String.format("%1$s:%2$s", om.getFrom().getNode(), om.getBody().substring(0, Configuration.iosPushAlertMaxLen)));
+		payload.addSound("default");
+		payload.addBadge(sn);
+		payload.addCustomDictionary("from", om.getFrom().toString());
+		
         return payload;
 	}
 }

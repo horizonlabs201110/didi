@@ -1,6 +1,7 @@
 package org.hellocar.openfire.plugin;
 
 import java.io.File;
+import java.util.Collection;
 import java.util.Map;
 
 import org.jivesoftware.openfire.*;
@@ -12,10 +13,11 @@ import org.jivesoftware.openfire.user.*;
 
 import org.xmpp.packet.*;
 
-public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMessageListener, UserEventListener, IForwardAdapter {
+public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMessageListener, UserEventListener, IForwardAdapter, IOfflineMessageAccessor {
 	private XMPPServer server = null;
 	private MessageRouter router = null;
 	private InterceptorManager interceptorManager = null;
+	private OfflineMessageStore omStore = null;
 	private IManager messageManager = null;
 	private IManager pushManager = null;
     private IManager forwardManager = null;
@@ -26,8 +28,9 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     	server = XMPPServer.getInstance();
     	router = server.getMessageRouter();
     	interceptorManager = InterceptorManager.getInstance();
+    	omStore = OfflineMessageStore.getInstance();
     	messageManager = MessageManager.createInstance();
-    	pushManager = PushManager.createInstance(PushAdapter.createInstance());
+    	pushManager = PushManager.createInstance(PushAdapter.createInstance(), this);
     	forwardManager = ForwardManager.createInstance(this);
     }
 
@@ -43,7 +46,6 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
 			    	catch (Exception ex) {
 			    		terminate();
 			    		Utils.error(String.format("Fail to load PushForwardPlugin, %1$s", ex.getMessage()), ex);
-			    		throw ex;
 			    	}
 				}
 	   		}   	
@@ -68,8 +70,9 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     }
     
     public void interceptPacket(Packet packet, Session session, boolean incoming, boolean processed) throws PacketRejectedException {
-    	if (Configuration.switchPostmanMessage && packet != null && packet instanceof Message) {
-    		if (packet.getTo().getNode().equalsIgnoreCase(Configuration.userPostman)) {
+    	if (packet != null && packet instanceof Message) {
+    		if (Configuration.switchPostmanMessage &&
+    			packet.getTo().getNode().equalsIgnoreCase(Configuration.userPostman)) {
 	        	try {
 	        		MessageHandler.GetHandler(MessageType.POSTMAN).Process((Message)packet);
 	            	Utils.debug(String.format("Postman message processed, %1$s", packet.toXML()));
@@ -101,7 +104,7 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     	try {
     		int count = DBMapper.prepareMessageForUser(user);
     		if (count > 0) { forwardManager.keepalive(); }
-    		Utils.debug(String.format("Prepare message for user %1$s, activate %2$d", user.getUsername(), count));
+    		Utils.debug(String.format("Prepare message for user %1$s, total count %2$d", user.getUsername(), count));
     	}
     	catch (Exception ex) {
     		Utils.error(String.format("Fail to prepare message for user %1$s, $2$s", user.getUsername(), ex.getMessage()), ex);
@@ -118,6 +121,10 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     	if (message != null) {
     		router.route(message);
     	}
+    }
+    
+    public Collection<OfflineMessage> getMessages(String userName, boolean delete) {
+    	return omStore.getMessages(userName, delete);
     }
     
     private void init() {
