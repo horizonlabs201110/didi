@@ -20,10 +20,10 @@ public class DBMapper {
     		"UPDATE `ofhcmessage` SET `status` = ?, `lastModified` = ? WHERE `type` = ? AND `to` = ? AND `status` = ?";
     private static final String SQL_UPDATE_MESSAGE_STATUS =
     		"UPDATE `ofhcmessage` SET `status` = ?, `statusMessage` = ?, `lastModified` = ? WHERE `id` = ?";
-    private static final String SQL_UPDATE_OFFLINE_MESSAGE_STATUS =
-    		"UPDATE `ofhcmessage` SET `status` = ?, `statusMessage` = ?, `lastModified` = ? WHERE `type` = ? AND `to` = ? AND `status` = ?";
     private static final String SQL_GET_ALL_MESSAGES =
     		"SELECT `id`,`type`,`to`,`from`,`status`,`statusMessage`,`stanza`,`lastModified` FROM `ofhcmessage` WHERE `type` = ? AND `status` = ?";
+    private static final String SQL_GET_ALL_MESSAGES_FOR_PUSH =
+    		"SELECT `id`, `stanza`, `iostoken` FROM `ofhcmessage` AS m LEFT OUTER JOIN `ofhcuserextra` AS u ON u.`username` = m.`to` AND u.`iospush` IS TRUE WHERE m.`type` = ? AND m.`status` = ?";
     private static final String SQL_GET_USEREXTRA =
     		"SELECT `iospush`, `iostoken` FROM `ofhcuserextra` WHERE `username` = ?";
     private static final String SQL_INSERT_USEREXTRA = 
@@ -114,27 +114,6 @@ public class DBMapper {
         }
     }
     
-    public static void updateOfflineMessageStatus(String userName, MessageStatus status, String statusMessage) throws SQLException  {
-    	Connection con = null;
-        PreparedStatement pstmt = null;
-        try {
-        	con = DbConnectionManager.getConnection();
-            pstmt = con.prepareStatement(SQL_UPDATE_OFFLINE_MESSAGE_STATUS);
-            
-            pstmt.setInt(1, status.toInt());
-            pstmt.setString(2, statusMessage);
-            pstmt.setLong(3, Utils.getNow());
-            pstmt.setInt(3, MessageType.OFFLINE.toInt());
-            pstmt.setString(4, userName);
-            pstmt.setInt(5, MessageStatus.READY.toInt());
-            
-            pstmt.execute();
-        }
-        finally {
-            DbConnectionManager.closeConnection(pstmt, con);
-        }
-    }
-    
     public static ArrayList<MessageEx> getAllMessages(MessageType type, MessageStatus status) throws SQLException, DocumentException {
     	Connection con = null;
         PreparedStatement pstmt = null;
@@ -163,6 +142,32 @@ public class DBMapper {
             DbConnectionManager.closeConnection(pstmt, con);
         }
         return mxs;
+    }
+    
+    public static ArrayList<MessagePush> getAllMessagesForPush() throws SQLException, DocumentException {
+    	Connection con = null;
+        PreparedStatement pstmt = null;
+        ArrayList<MessagePush> mps = new ArrayList<MessagePush>();
+        try {
+        	con = DbConnectionManager.getConnection();
+            pstmt = con.prepareStatement(SQL_GET_ALL_MESSAGES_FOR_PUSH);
+            pstmt.setInt(1, MessageType.OFFLINE.toInt());
+            pstmt.setInt(2, MessageStatus.READY.toInt());
+            ResultSet rs = pstmt.executeQuery();
+            
+            while (rs.next()) {
+            	MessagePush mp = new MessagePush();
+            	mp.id = rs.getLong(1);
+            	mp.message = new Message(DocumentHelper.parseText(rs.getString(2)).getRootElement());
+            	mp.iostoken = rs.getString(3);
+            	
+            	mps.add(mp);
+            }
+        }
+        finally {
+            DbConnectionManager.closeConnection(pstmt, con);
+        }
+        return mps;
     }
     
     public static void addUserExtra(UserExtra extra) throws SQLException { 

@@ -64,44 +64,37 @@ public class PushManager implements IManager, Runnable {
 		while (!terminated) {
 			boolean done = false;
 			int count = 0;
-			ArrayList<MessageEx> mxs = null;
+			ArrayList<MessagePush> mps = null;
 			try {
 				Configuration.load();
 				done = false;
 				do {
-					mxs = DBMapper.getAllMessages(MessageType.OFFLINE, MessageStatus.READY);
-					count = mxs.size();
+					mps = DBMapper.getAllMessagesForPush();
+					count = mps == null ? 0 : mps.size();
 					done = count > 0 ? false : true;
+					Utils.debug(String.format("Get %1$d offline message ready to push", count));
 					if (!done) {
-						Hashtable<String, UserExtra> userTable = new Hashtable<String, UserExtra>();
-						for(MessageEx mx : mxs) {
-							String userName = mx.message.getTo().getNode();
-							if (!userTable.containsKey(userName)) {
-								userTable.put(userName, DBMapper.getUserExtra(userName));
-							}
-						}
-						
-						for (String userName : userTable.keySet()) {
-							UserExtra userExtra = userTable.get(userName);
-							if (userExtra != null && userExtra.iosPush && !userExtra.iosToken.isEmpty()) {
-								Collection<OfflineMessage> oms = omaccessor.getMessages(userName, false);
-								if (oms != null && oms.size() > 0) {
-									Utils.debug(String.format("Get %1$d offline message ready to push to user %2$s", oms.size(), userName));
-									
-									int sn = 0;
-									for (OfflineMessage om : oms) {
-										sn ++;
-										try {
-											pusher.push(om, sn, userExtra.iosToken);
-											Utils.debug(String.format("Push message, %1$s", om.toXML()));
-										}
-										catch (Exception ex) {
-											Utils.error(String.format("Fail to push message to user %1$s, %2$s, %3$s", userName, ex.getMessage(), om.toXML()), ex);
-										}
-									}
+						Hashtable<String, Integer> ut = new Hashtable<String, Integer>();
+						for(MessagePush mp : mps) {
+							String userName = mp.message.getTo().getNode();
+							try {
+								if (mp.iostoken == null || mp.iostoken.isEmpty() || mp.iostoken.length() != 64) {
+									throw new Exception("push disabled");
 								}
-								DBMapper.updateOfflineMessageStatus(userName, MessageStatus.SUCCEED, "");
+								if (!ut.containsKey(userName)) {
+									ut.put(userName, omaccessor.getMessageCount(userName));
+								}
+								pusher.push(mp.message, ut.get(userName), mp.iostoken);
+								mp.status = MessageStatus.SUCCEED;
+								mp.statusMessage = "";
+								Utils.debug(String.format("Push message to user %1$s, %2$s", userName, mp.message.toXML()));
 							}
+							catch (Exception ex) {
+								mp.status = MessageStatus.FAIL;
+								mp.statusMessage = ex.getMessage();
+								Utils.error(String.format("Fail to push message to user %1$s, %2$s, %3$s", userName, ex.getMessage(), mp.message.toXML()), ex);
+							}
+							DBMapper.updateMessageStatus(mp.id, mp.status, mp.statusMessage);
 							if (terminated) { break; }
 						}
 					}

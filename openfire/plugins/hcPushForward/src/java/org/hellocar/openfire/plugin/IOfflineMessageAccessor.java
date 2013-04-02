@@ -5,5 +5,5 @@ import java.util.Collection;
 import org.jivesoftware.openfire.OfflineMessage;
 
 public interface IOfflineMessageAccessor {
-	Collection<OfflineMessage> getMessages(String userName, boolean delete);
+	int getMessageCount(String userName);
 }

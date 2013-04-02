@@ -23,6 +23,17 @@ class MessageEx {
 	}
 }
 
+class MessagePush {
+	public Message message;
+	public long id;
+	public MessageStatus status;
+	public String statusMessage;
+	public String iostoken;
+	
+	public MessagePush() {
+	}
+}
+
 enum MessageStatus { 
 	QUEUE(1), READY(2), FAIL(9), SUCCEED(10);
 	

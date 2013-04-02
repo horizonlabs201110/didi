@@ -1,7 +1,7 @@
 package org.hellocar.openfire.plugin;
 
-import org.jivesoftware.openfire.OfflineMessage;
 import org.json.JSONException;
+import org.xmpp.packet.Message;
 
 import javapns.communication.exceptions.KeystoreException;
 import javapns.notification.PushNotificationPayload;
@@ -19,7 +19,7 @@ public class PushAdapter implements IPushAdapter {
 		iosPusher = new IOSPushAdapter();
 	}
 	
-	public void push(OfflineMessage om, int sn, String token) throws Exception {
+	public void push(Message om, int sn, String token) throws Exception {
 		iosPusher.push(om, sn, token);
 	}
 }
@@ -31,7 +31,7 @@ class IOSPushAdapter implements IPushAdapter {
 	public IOSPushAdapter() {
 	}
 	
-	public void push(OfflineMessage om, int sn, String token) throws Exception {
+	public void push(Message om, int sn, String token) throws Exception {
 		getPushQueue().add(generatePayload(om, sn), token);
 	}
 	
@@ -47,7 +47,7 @@ class IOSPushAdapter implements IPushAdapter {
 		return queue;
 	}
 	
-	private PushNotificationPayload generatePayload(OfflineMessage om, int sn) throws JSONException{
+	private PushNotificationPayload generatePayload(Message om, int sn) throws JSONException{
 		PushNotificationPayload payload = PushNotificationPayload.complex();
 		payload.addAlert(String.format("%1$s:%2$s", om.getFrom().getNode(), om.getBody().substring(0, Configuration.iosPushAlertMaxLen)));
 		payload.addSound("default");

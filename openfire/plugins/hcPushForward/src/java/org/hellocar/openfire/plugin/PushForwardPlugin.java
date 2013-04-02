@@ -123,8 +123,14 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     	}
     }
     
-    public Collection<OfflineMessage> getMessages(String userName, boolean delete) {
-    	return omStore.getMessages(userName, delete);
+    public int getMessageCount(String userName) {
+    	Collection<OfflineMessage> om  = omStore.getMessages(userName, false);
+    	if (om != null) {
+    		return om.size();
+    	}
+    	else {
+    		return 0;
+    	}
     }
     
     private void init() {

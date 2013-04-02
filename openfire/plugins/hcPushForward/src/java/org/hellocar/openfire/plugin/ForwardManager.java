@@ -62,7 +62,7 @@ public class ForwardManager implements IManager, Runnable {
 				done = false;
 				do {
 					mxs = DBMapper.getAllMessages(MessageType.POSTMAN, MessageStatus.READY);
-					count = mxs.size();
+					count = mxs == null ? 0 : mxs.size();
 					done = count > 0 ? false : true;
 					Utils.debug(String.format("Get %1$d postman message ready to forward", count));
 					

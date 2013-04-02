@@ -1,7 +1,7 @@
 package org.hellocar.openfire.plugin;
 
-import org.jivesoftware.openfire.OfflineMessage;
+import org.xmpp.packet.Message;
 
 public interface IPushAdapter {
-	void push(OfflineMessage om, int sn, String token) throws Exception;
+	void push(Message om, int sn, String token) throws Exception;
 }
