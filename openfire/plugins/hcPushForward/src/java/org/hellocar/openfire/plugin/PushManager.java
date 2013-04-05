@@ -2,8 +2,6 @@ package org.hellocar.openfire.plugin;
 
 import java.util.*;
 
-import org.jivesoftware.openfire.*;
-
 public class PushManager implements IManager, Runnable {
 	public static IManager createInstance(IPushAdapter push, IOfflineMessageAccessor accessor) {
 		return new PushManager(push, accessor);
@@ -79,15 +77,19 @@ public class PushManager implements IManager, Runnable {
 							String userName = mp.message.getTo().getNode();
 							try {
 								if (mp.iostoken == null || mp.iostoken.isEmpty() || mp.iostoken.length() != 64) {
-									throw new Exception("push disabled");
+									mp.status = MessageStatus.FAIL;
+									mp.statusMessage = "push disabled";
+									Utils.debug(String.format("Push disabled on user %1$s", userName));
 								}
-								if (!ut.containsKey(userName)) {
-									ut.put(userName, omaccessor.getMessageCount(userName));
+								else {
+									if (!ut.containsKey(userName)) {
+										ut.put(userName, omaccessor.getMessageCount(userName));
+									}
+									pusher.push(mp.message, ut.get(userName), mp.iostoken);
+									mp.status = MessageStatus.SUCCEED;
+									mp.statusMessage = "";
+									Utils.debug(String.format("Push message to user %1$s, %2$s", userName, mp.message.toXML()));
 								}
-								pusher.push(mp.message, ut.get(userName), mp.iostoken);
-								mp.status = MessageStatus.SUCCEED;
-								mp.statusMessage = "";
-								Utils.debug(String.format("Push message to user %1$s, %2$s", userName, mp.message.toXML()));
 							}
 							catch (Exception ex) {
 								mp.status = MessageStatus.FAIL;
@@ -99,7 +101,7 @@ public class PushManager implements IManager, Runnable {
 						}
 					}
 					if (terminated) { break; }
-				} while (done);
+				} while (!done);
 			}
 			catch (Exception ex) {
 				Utils.error(String.format("Unexpected error occurs in message pushing, %1$s", ex.getMessage()), ex);

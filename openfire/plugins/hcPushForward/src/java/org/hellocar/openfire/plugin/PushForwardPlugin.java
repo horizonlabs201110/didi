@@ -17,6 +17,7 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
 	private XMPPServer server = null;
 	private MessageRouter router = null;
 	private InterceptorManager interceptorManager = null;
+	private UserManager userManager = null;
 	private OfflineMessageStore omStore = null;
 	private IManager messageManager = null;
 	private IManager pushManager = null;
@@ -27,6 +28,7 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     public PushForwardPlugin() {
     	server = XMPPServer.getInstance();
     	router = server.getMessageRouter();
+    	userManager = server.getUserManager();
     	interceptorManager = InterceptorManager.getInstance();
     	omStore = OfflineMessageStore.getInstance();
     	messageManager = MessageManager.createInstance();
@@ -70,24 +72,38 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     }
     
     public void interceptPacket(Packet packet, Session session, boolean incoming, boolean processed) throws PacketRejectedException {
-    	if (packet != null && packet instanceof Message) {
-    		if (Configuration.switchPostmanMessage &&
-    			packet.getTo().getNode().equalsIgnoreCase(Configuration.userPostman)) {
-	        	try {
-	        		MessageHandler.GetHandler(MessageType.POSTMAN).Process((Message)packet);
-	            	Utils.debug(String.format("Postman message processed, %1$s", packet.toXML()));
-	        	}
-	        	catch (Exception ex) {
-            		Utils.error(String.format("Fail to process postman message, %1$s, %2$s", ex.getMessage(), packet.toXML()), ex);
-	            }
-	        }
+    	if (packet != null && packet instanceof Message && processed) {
+    		if (Configuration.switchPostmanMessage) {
+    			String target = packet.getTo().getNode();
+    			if (!userManager.isRegisteredUser(target) || target.equalsIgnoreCase(Configuration.userPostman)) {
+        			Message message = (Message)packet;
+    	        	try {
+    	        		IMessageHandler handler = MessageHandler.getHandler(MessageType.POSTMAN);
+    	        		if (!handler.validate(message)) {
+    	        			Utils.debug(String.format("Invalid postman message skipped, %1$s", message.toXML()));
+    	        			return;
+    	        		}
+    	        		handler.process(message);
+    	            	Utils.debug(String.format("Postman message processed, %1$s", message.toXML()));
+    	        	}
+    	        	catch (Exception ex) {
+                		Utils.error(String.format("Fail to process postman message, %1$s, %2$s", ex.getMessage(), message.toXML()), ex);
+    	            }
+    	        }
+    		}
     	}
     }
     
     public void messageStored(Message message) {
-    	if (Configuration.switchOfflineMessage) {     		
+    	if (Configuration.switchOfflineMessage &&
+    		!message.getTo().getNode().equalsIgnoreCase(Configuration.userPostman)) {
 	    	try {
-	    		MessageHandler.GetHandler(MessageType.OFFLINE).Process(message);
+	    		IMessageHandler handler = MessageHandler.getHandler(MessageType.OFFLINE);
+	    		if (!handler.validate(message)) {
+	    			Utils.debug(String.format("Invalid offline message skipped, %1$s", message.toXML()));
+	    			return;
+	    		}
+	    		MessageHandler.getHandler(MessageType.OFFLINE).process(message);
 	    		pushManager.keepalive();
 	    		Utils.debug(String.format("Offline message processed, %1$s", message.toXML()));
 	    	} 
@@ -104,7 +120,7 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     	try {
     		int count = DBMapper.prepareMessageForUser(user);
     		if (count > 0) { forwardManager.keepalive(); }
-    		Utils.debug(String.format("Prepare message for user %1$s, total count %2$d", user.getUsername(), count));
+    		Utils.debug(String.format("Prepare message for user %1$s, total %2$d", user.getUsername(), count));
     	}
     	catch (Exception ex) {
     		Utils.error(String.format("Fail to prepare message for user %1$s, $2$s", user.getUsername(), ex.getMessage()), ex);

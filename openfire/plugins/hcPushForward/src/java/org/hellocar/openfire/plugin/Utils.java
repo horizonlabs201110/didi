@@ -5,7 +5,7 @@ import java.util.*;
 import org.slf4j.*;
 
 public class Utils {
-	public static final String PLUGIN_NAME = "hcPushForwardPlugin";
+	public static final String PLUGIN_NAME = "hcPushForward";
 	public static final long THREAD_PUSH_JOIN_MILLISECONDS = 3000;
 	public static final long THREAD_FORWARD_JOIN_MILLISECONDS = 3000;
 	public static final long THREAD_MESSAGE_JOIN_MILLISECONDS = 3000;

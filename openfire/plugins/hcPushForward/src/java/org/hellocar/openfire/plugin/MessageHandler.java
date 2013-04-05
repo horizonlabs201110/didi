@@ -1,6 +1,5 @@
 package org.hellocar.openfire.plugin;
 
-import java.sql.SQLException;
 import java.util.Hashtable;
 
 import org.dom4j.Element;
@@ -11,7 +10,7 @@ public class MessageHandler {
 	private static Hashtable<MessageType, IMessageHandler> handlerTable = new Hashtable<MessageType, IMessageHandler>(); 
 	private static Object handlerLock = new Object();
 	
-	public static IMessageHandler GetHandler(MessageType type) {
+	public static IMessageHandler getHandler(MessageType type) {
 		if (!handlerTable.containsKey(type)) {
 			synchronized(handlerLock) {
 				if (!handlerTable.containsKey(type)) {
@@ -35,12 +34,20 @@ class PostmanMessageHandler implements IMessageHandler {
 	public PostmanMessageHandler() {
 	}
 	
-	public void Process(Message message) throws SQLException {
+	public boolean validate(Message message) {
 		if (message == null) {
-			throw new IllegalArgumentException("message");
+			return false;
+		}
+		return true;
+	}
+	
+	public void process(Message message) throws Exception {
+		if (!validate(message)) {
+			throw new Exception("invalid postman message");
 		}
 		
 		Message msg = message.createCopy();
+		String target = msg.getTo().getNode();
 		Element emsg = msg.getElement();
 		Element eiostoken = emsg.element(Configuration.messageIOSToken);
 		Element eiospush = emsg.element(Configuration.messageIOSPush);
@@ -58,10 +65,16 @@ class PostmanMessageHandler implements IMessageHandler {
 			eiospush.detach();
 		}
 		
-		if (eforward != null) {
+		boolean forward = false;
+		if (!target.equalsIgnoreCase(Configuration.userPostman)) {
+			forward = true;
+		}
+		else if (eforward != null) {
 			msg.setTo(new JID(eforward.getTextTrim()));
 			eforward.detach();
-			
+			forward = true;
+		}
+		if (forward) {
 			DBMapper.addMessage(new MessageEx(msg, MessageType.POSTMAN, MessageStatus.QUEUE));
 		}
 		
@@ -84,9 +97,27 @@ class OfflineMessageHandler implements IMessageHandler {
 	public OfflineMessageHandler() {
 	}
 	
-	public void Process(Message message) throws SQLException {
+	public boolean validate(Message message) {
 		if (message == null) {
-			throw new IllegalArgumentException("message");
+			return false;
+		}
+		
+		String to = message.getTo().getNode();
+		if (to == null || to.isEmpty()) {
+			return false;
+		}
+		
+		String from = message.getFrom().getNode();
+		if (from == null || from.isEmpty()) {
+			return false;
+		}
+		
+		return true;
+	}
+	
+	public void process(Message message) throws Exception {
+		if (!validate(message)) {
+			throw new Exception("invalid offline message");
 		}
 		
 		Message msg = message.createCopy();

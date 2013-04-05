@@ -32,7 +32,9 @@ class IOSPushAdapter implements IPushAdapter {
 	}
 	
 	public void push(Message om, int sn, String token) throws Exception {
-		getPushQueue().add(generatePayload(om, sn), token);
+		if (Configuration.iosPushEnabled) {
+			getPushQueue().add(generatePayload(om, sn), token);
+		}
 	}
 	
 	private PushQueue getPushQueue() throws KeystoreException {
@@ -49,7 +51,12 @@ class IOSPushAdapter implements IPushAdapter {
 	
 	private PushNotificationPayload generatePayload(Message om, int sn) throws JSONException{
 		PushNotificationPayload payload = PushNotificationPayload.complex();
-		payload.addAlert(String.format("%1$s:%2$s", om.getFrom().getNode(), om.getBody().substring(0, Configuration.iosPushAlertMaxLen)));
+		
+		String alert = om.getBody();
+		if (alert.length() > Configuration.iosPushAlertMaxLen) {
+			alert = alert.substring(0, Configuration.iosPushAlertMaxLen - 1);
+		}
+		payload.addAlert(String.format("%1$s:%2$s", om.getFrom().getNode(), alert));
 		payload.addSound("default");
 		payload.addBadge(sn);
 		payload.addCustomDictionary("from", om.getFrom().toString());

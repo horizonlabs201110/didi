@@ -13,12 +13,13 @@ public class Configuration {
 	public static long forwardIntervalInSeconds = 600;	//10 Minutes
 	public static long messageIntervalInSeconds = 3600; //1 Hour
 	public static long messageRetentionInSeconds = 86400; //1 Day
+	public static boolean iosPushEnabled = true;
 	public static String iosPushKeyStore = null;
 	public static String iosPushPassword = null;
 	public static int iosPushThread = 2;
-	public static boolean iosPushProduction = false;
+	public static boolean iosPushProduction = true;
 	public static int iosPushAlertMaxLen = 64;
-		
+	
 	public static void load() {
 		switchPostmanMessage = JiveGlobals.getBooleanProperty("plugin.hcPushForward.switchPostmanMessage", true);
 		switchOfflineMessage = JiveGlobals.getBooleanProperty("plugin.hcPushForward.switchOfflineMessage", true);
@@ -26,9 +27,11 @@ public class Configuration {
 		forwardIntervalInSeconds = JiveGlobals.getLongProperty("plugin.hcPushForward.forwardIntervalInSeconds", 600);
 		messageIntervalInSeconds = JiveGlobals.getLongProperty("plugin.hcPushForward.messageIntervalInSeconds", 3600);
 		messageRetentionInSeconds = JiveGlobals.getLongProperty("plugin.hcPushForward.messageRetentionInSeconds", 86400);
+		iosPushEnabled = JiveGlobals.getBooleanProperty("plugin.hcPushForward.iosPushEnabled", true);
 		iosPushKeyStore = JiveGlobals.getProperty("plugin.hcPushForward.iosPushKeyStore");
 		iosPushPassword = JiveGlobals.getProperty("plugin.hcPushForward.iosPushPassword");
 		iosPushThread = JiveGlobals.getIntProperty("plugin.hcPushForward.iosPushThread", 2);
-		iosPushProduction = JiveGlobals.getBooleanProperty("plugin.hcPushForward.iosPushProduction", false);
+		iosPushProduction = JiveGlobals.getBooleanProperty("plugin.hcPushForward.iosPushProduction", true);
+		iosPushAlertMaxLen = JiveGlobals.getIntProperty("plugin.hcPushForward.iosPushAlertMaxLen", 64);
 	}
 }

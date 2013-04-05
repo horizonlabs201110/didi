@@ -84,7 +84,7 @@ public class ForwardManager implements IManager, Runnable {
 						}
 					}
 					if (terminated) { break; }
-				} while (done);
+				} while (!done);
 			}
 			catch (Exception ex) {
 				Utils.error(String.format("Unexpected error occurs in message forwarding, %1$s", ex.getMessage()), ex);
