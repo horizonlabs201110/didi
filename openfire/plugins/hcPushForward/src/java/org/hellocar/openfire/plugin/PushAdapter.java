@@ -25,8 +25,8 @@ public class PushAdapter implements IPushAdapter {
 }
 
 class IOSPushAdapter implements IPushAdapter {
-	private PushQueue queue = null;
-	private Object queueLock = new Object();
+	private PushQueue q = null;
+	private Object qLock = new Object();
 	
 	public IOSPushAdapter() {
 	}
@@ -38,23 +38,28 @@ class IOSPushAdapter implements IPushAdapter {
 	}
 	
 	private PushQueue getPushQueue() throws KeystoreException {
-		if (queue == null) {
-			synchronized(queueLock) {
-				if (queue == null) {
-					queue = Push.queue(Configuration.iosPushKeyStore, Configuration.iosPushPassword, Configuration.iosPushProduction, Configuration.iosPushThread);
-					queue.start();
+		if (q == null) {
+			synchronized(qLock) {
+				if (q == null) {
+					try {
+						q = Push.queue(Configuration.iosPushKeyStore, Configuration.iosPushPassword, Configuration.iosPushProduction, Configuration.iosPushThread);
+						q.start();
+					}
+					catch (Exception ex) {
+						q = null;
+						throw ex;
+					}
 				}
 			}
 		}
-		return queue;
+		return q;
 	}
 	
 	private PushNotificationPayload generatePayload(Message om, int sn) throws JSONException{
 		PushNotificationPayload payload = PushNotificationPayload.complex();
-		
 		String alert = om.getBody();
 		if (alert.length() > Configuration.iosPushAlertMaxLen) {
-			alert = alert.substring(0, Configuration.iosPushAlertMaxLen - 1);
+			alert = alert.substring(0, Configuration.iosPushAlertMaxLen - 1).concat(Configuration.iosPushAlertSuffix);
 		}
 		payload.addAlert(String.format("%1$s:%2$s", om.getFrom().getNode(), alert));
 		payload.addSound("default");

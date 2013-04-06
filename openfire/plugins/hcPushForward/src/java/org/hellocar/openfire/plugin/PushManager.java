@@ -71,17 +71,18 @@ public class PushManager implements IManager, Runnable {
 					count = mps == null ? 0 : mps.size();
 					done = count > 0 ? false : true;
 					Utils.debug(String.format("Get %1$d offline message ready to push", count));
+					
 					if (!done) {
 						Hashtable<String, Integer> ut = new Hashtable<String, Integer>();
 						for(MessagePush mp : mps) {
 							String userName = mp.message.getTo().getNode();
-							try {
-								if (mp.iostoken == null || mp.iostoken.isEmpty() || mp.iostoken.length() != 64) {
-									mp.status = MessageStatus.FAIL;
-									mp.statusMessage = "push disabled";
-									Utils.debug(String.format("Push disabled on user %1$s", userName));
-								}
-								else {
+							if (mp.iostoken == null || mp.iostoken.isEmpty()) {
+								mp.status = MessageStatus.FAIL;
+								mp.statusMessage = "push disabled";
+								Utils.debug(String.format("Push disabled on user %1$s", userName));
+							}
+							else {
+								try {
 									if (!ut.containsKey(userName)) {
 										ut.put(userName, omaccessor.getMessageCount(userName));
 									}
@@ -90,14 +91,15 @@ public class PushManager implements IManager, Runnable {
 									mp.statusMessage = "";
 									Utils.debug(String.format("Push message to user %1$s, %2$s", userName, mp.message.toXML()));
 								}
-							}
-							catch (Exception ex) {
-								mp.status = MessageStatus.FAIL;
-								mp.statusMessage = ex.getMessage();
-								Utils.error(String.format("Fail to push message to user %1$s, %2$s, %3$s", userName, ex.getMessage(), mp.message.toXML()), ex);
+								catch (Exception ex) {
+									mp.status = MessageStatus.FAIL;
+									mp.statusMessage = ex.getMessage();
+									Utils.error(String.format("Fail to push message to user %1$s, %2$s, %3$s", userName, ex.getMessage(), mp.message.toXML()), ex);
+								}
 							}
 							DBMapper.updateMessageStatus(mp.id, mp.status, mp.statusMessage);
 							if (terminated) { break; }
+							Thread.sleep(Utils.THREAD_DATABASE_HIT_DELAY_MILLISECONDS);
 						}
 					}
 					if (terminated) { break; }

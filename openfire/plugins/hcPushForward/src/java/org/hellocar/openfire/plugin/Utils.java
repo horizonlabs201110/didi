@@ -9,7 +9,7 @@ public class Utils {
 	public static final long THREAD_PUSH_JOIN_MILLISECONDS = 3000;
 	public static final long THREAD_FORWARD_JOIN_MILLISECONDS = 3000;
 	public static final long THREAD_MESSAGE_JOIN_MILLISECONDS = 3000;
-	
+	public static final long THREAD_DATABASE_HIT_DELAY_MILLISECONDS = 100;
 	private static Logger tracer = LoggerFactory.getLogger(PLUGIN_NAME);
 	
 	public static long getNow() {

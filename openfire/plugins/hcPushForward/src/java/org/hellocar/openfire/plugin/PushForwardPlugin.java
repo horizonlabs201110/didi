@@ -72,7 +72,7 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     }
     
     public void interceptPacket(Packet packet, Session session, boolean incoming, boolean processed) throws PacketRejectedException {
-    	if (packet != null && packet instanceof Message && processed) {
+    	if (!processed && packet != null && packet instanceof Message) {
     		if (Configuration.switchPostmanMessage) {
     			String target = packet.getTo().getNode();
     			if (!userManager.isRegisteredUser(target) || target.equalsIgnoreCase(Configuration.userPostman)) {
@@ -80,7 +80,7 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     	        	try {
     	        		IMessageHandler handler = MessageHandler.getHandler(MessageType.POSTMAN);
     	        		if (!handler.validate(message)) {
-    	        			Utils.debug(String.format("Invalid postman message skipped, %1$s", message.toXML()));
+    	        			Utils.debug(String.format("Invalid postman message detected, %1$s", message.toXML()));
     	        			return;
     	        		}
     	        		handler.process(message);
@@ -95,21 +95,22 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     }
     
     public void messageStored(Message message) {
-    	if (Configuration.switchOfflineMessage &&
-    		!message.getTo().getNode().equalsIgnoreCase(Configuration.userPostman)) {
-	    	try {
-	    		IMessageHandler handler = MessageHandler.getHandler(MessageType.OFFLINE);
-	    		if (!handler.validate(message)) {
-	    			Utils.debug(String.format("Invalid offline message skipped, %1$s", message.toXML()));
-	    			return;
-	    		}
-	    		MessageHandler.getHandler(MessageType.OFFLINE).process(message);
-	    		pushManager.keepalive();
-	    		Utils.debug(String.format("Offline message processed, %1$s", message.toXML()));
-	    	} 
-	    	catch (Exception ex) {
-	    		Utils.error(String.format("Fail to process offline message, %1$s, %2$s", ex.getMessage(), message.toXML()), ex);
-	    	}
+    	if (Configuration.switchOfflineMessage) {
+    		if (!message.getTo().getNode().equalsIgnoreCase(Configuration.userPostman)) {
+		    	try {
+		    		IMessageHandler handler = MessageHandler.getHandler(MessageType.OFFLINE);
+		    		if (!handler.validate(message)) {
+		    			Utils.debug(String.format("Invalid offline message detected, %1$s", message.toXML()));
+		    			return;
+		    		}
+		    		handler.process(message);
+		    		pushManager.keepalive();
+		    		Utils.debug(String.format("Offline message processed, %1$s", message.toXML()));
+		    	} 
+		    	catch (Exception ex) {
+		    		Utils.error(String.format("Fail to process offline message, %1$s, %2$s", ex.getMessage(), message.toXML()), ex);
+		    	}
+    		}
     	}
     }
     

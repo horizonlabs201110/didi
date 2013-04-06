@@ -82,6 +82,7 @@ public class ForwardManager implements IManager, Runnable {
 							DBMapper.updateMessageStatus(mx.id, mx.status, mx.statusMessage);
 							if (terminated) { break; }
 						}
+						Thread.sleep(Utils.THREAD_DATABASE_HIT_DELAY_MILLISECONDS);
 					}
 					if (terminated) { break; }
 				} while (!done);

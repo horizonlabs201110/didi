@@ -38,13 +38,26 @@ class PostmanMessageHandler implements IMessageHandler {
 		if (message == null) {
 			return false;
 		}
+		
+		String to = message.getTo().getNode();
+		if (to == null || to.isEmpty()) {
+			return false;
+		}
+		
+		String from = message.getFrom().getNode();
+		if (from == null || from.isEmpty()) {
+			return false;
+		}
+		
 		return true;
 	}
 	
 	public void process(Message message) throws Exception {
+		/*
 		if (!validate(message)) {
 			throw new Exception("invalid postman message");
 		}
+		 */
 		
 		Message msg = message.createCopy();
 		String target = msg.getTo().getNode();
@@ -116,9 +129,11 @@ class OfflineMessageHandler implements IMessageHandler {
 	}
 	
 	public void process(Message message) throws Exception {
+		/*
 		if (!validate(message)) {
 			throw new Exception("invalid offline message");
 		}
+		 */
 		
 		Message msg = message.createCopy();
 		DBMapper.addMessage(new MessageEx(msg, MessageType.OFFLINE, MessageStatus.READY));
