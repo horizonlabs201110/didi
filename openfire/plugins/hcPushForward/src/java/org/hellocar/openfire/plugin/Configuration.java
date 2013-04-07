@@ -11,6 +11,7 @@ public class Configuration {
 	public static boolean switchOfflineMessage = true;
 	public static long pushIntervalInSeconds  = 600;	//10 Minutes
 	public static long forwardIntervalInSeconds = 600;	//10 Minutes
+	public static long forwardDelayInSeconds = 5; // 5 Seconds
 	public static long messageIntervalInSeconds = 86400; //1 Day
 	public static long messageRetentionInSeconds = 86400; //1 Day
 	public static boolean iosPushEnabled = false;
@@ -26,6 +27,7 @@ public class Configuration {
 		switchOfflineMessage = JiveGlobals.getBooleanProperty("plugin.hcPushForward.switchOfflineMessage", true);
 		pushIntervalInSeconds = JiveGlobals.getLongProperty("plugin.hcPushForward.pushIntervalInSeconds", 600);
 		forwardIntervalInSeconds = JiveGlobals.getLongProperty("plugin.hcPushForward.forwardIntervalInSeconds", 600);
+		forwardDelayInSeconds = JiveGlobals.getLongProperty("plugin.hcPushForward.forwardDelayInSeconds", 5);
 		messageIntervalInSeconds = JiveGlobals.getLongProperty("plugin.hcPushForward.messageIntervalInSeconds", 86400);
 		messageRetentionInSeconds = JiveGlobals.getLongProperty("plugin.hcPushForward.messageRetentionInSeconds", 86400);
 		iosPushEnabled = JiveGlobals.getBooleanProperty("plugin.hcPushForward.iosPushEnabled", false);

@@ -13,7 +13,7 @@ import org.jivesoftware.openfire.user.*;
 
 import org.xmpp.packet.*;
 
-public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMessageListener, UserEventListener, IForwardAdapter, IOfflineMessageAccessor {
+public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMessageListener, UserEventListener, IForwardAdapter, IOfflineMessageAccessor, IThreadPoolTaskListener {
 	private XMPPServer server = null;
 	private MessageRouter router = null;
 	private InterceptorManager interceptorManager = null;
@@ -104,7 +104,7 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
 		    			return;
 		    		}
 		    		handler.process(message);
-		    		pushManager.keepalive();
+		    		wakeUpPushManager();
 		    		Utils.debug(String.format("Offline message processed, %1$s", message.toXML()));
 		    	} 
 		    	catch (Exception ex) {
@@ -120,7 +120,9 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     public void userCreated(User user, Map<String, Object> params) {
     	try {
     		int count = DBMapper.prepareMessageForUser(user);
-    		if (count > 0) { forwardManager.keepalive(); }
+    		if (count > 0) { 
+    			wakeUpForwardManager(); 
+    		}
     		Utils.debug(String.format("Prepare message for user %1$s, total %2$d", user.getUsername(), count));
     	}
     	catch (Exception ex) {
@@ -167,5 +169,23 @@ public class PushForwardPlugin implements Plugin, PacketInterceptor, OfflineMess
     	forwardManager.terminate();
 		pushManager.terminate();
 		messageManager.terminate();
+    }
+    
+    private void wakeUpForwardManager() {
+    	Utils.executeTask(this, null);
+    }
+    
+    public void wakeUpPushManager(){
+    	pushManager.keepalive();
+    }
+    
+    public void taskrun(Object state) {
+    	try {
+	    	Thread.sleep(Configuration.forwardDelayInSeconds * 1000);
+	    	forwardManager.keepalive();
+    	}
+    	catch (Exception ex) {
+    		Utils.error(String.format("Fail to wake up forward manager, %1$s", ex.getMessage()), ex);
+    	}
     }
 }
